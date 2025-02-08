@@ -6,9 +6,14 @@ import { resolve } from "path";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "lib"),
+    },
+  },
   build: {
     lib: {
-      entry: resolve(__dirname, "lib/main.ts"),
+      entry: resolve(__dirname, "lib/main.tsx"),
       name: "smart-custom-models",
       fileName: "smart-custom-models",
     },

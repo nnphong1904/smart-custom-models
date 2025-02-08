@@ -1,10 +1,10 @@
-import { Button } from "smart-custom-models";
+import { ModelForm } from "smart-custom-models";
 
 function App() {
   return (
-    <>
-      <Button />
-    </>
+    <div className="w-[684px]">
+      <ModelForm />
+    </div>
   );
 }
 
