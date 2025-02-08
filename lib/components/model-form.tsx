@@ -7,8 +7,14 @@ import { modelFormSchema, type ModelFormData } from "@/schemas/model-form";
 import { Provider } from "@/types";
 import { useMutation } from "@tanstack/react-query";
 import { mistralAi } from "@/ai-providers/mistral-ai";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export function ModelForm({ provider }: { provider: Provider }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [filteredModels, setFilteredModels] = useState<typeof models>([]);
+
   const form = useForm<ModelFormData>({
     resolver: zodResolver(modelFormSchema),
     defaultValues: {
@@ -57,6 +63,24 @@ export function ModelForm({ provider }: { provider: Provider }) {
 
   const models = getModels.data ?? [];
 
+  // Effect to handle search
+  useEffect(() => {
+    if (!models.length) return;
+
+    if (!debouncedSearchTerm.trim()) {
+      setFilteredModels(models);
+      return;
+    }
+
+    const searchTermLower = debouncedSearchTerm.toLowerCase();
+    const filtered = models.filter(
+      (model) =>
+        model.name.toLowerCase().includes(searchTermLower) ||
+        model.id.toLowerCase().includes(searchTermLower),
+    );
+    setFilteredModels(filtered);
+  }, [debouncedSearchTerm, models]);
+
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="mx-auto w-full px-4">
       <div className="space-y-6">
@@ -85,7 +109,7 @@ export function ModelForm({ provider }: { provider: Provider }) {
             </div>
           </div>
 
-          {/* Model lists */}
+          {/* Model lists with search */}
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Available Models</h2>
             <p className="text-sm text-gray-500">
@@ -98,44 +122,89 @@ export function ModelForm({ provider }: { provider: Provider }) {
                 </div>
               </div>
             ) : (
-              <div className="rounded-lg border border-gray-200">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="w-8 p-3">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-900">Name</th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-900">
-                        Context Length
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-900">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {models.map((model) => (
-                      <tr key={model.id} className="border-b border-gray-200">
-                        <td className="p-3">
-                          <input type="checkbox" className="rounded border-gray-300" />
-                        </td>
-                        <td className="p-3 text-sm text-gray-900">{model.name}</td>
-                        <td className="p-3 text-sm text-gray-900">
-                          {model.contextLength.toLocaleString()}
-                        </td>
-                        <td className="p-3 text-sm text-gray-900">
-                          {model.pricePerMillionTokens ? (
-                            <div>
-                              ${model.pricePerMillionTokens.prompt}/1M input tokens
-                              <br />${model.pricePerMillionTokens.completion}/1M output tokens
-                            </div>
-                          ) : (
-                            "Free"
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-4">
+                {/* Search Input */}
+                <div className="relative">
+                  <Input
+                    type="search"
+                    placeholder="Search models..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10"
+                  />
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+
+                {/* Models Table */}
+                <div className="rounded-lg border border-gray-200">
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr className="border-b border-gray-200">
+                          <th className="w-8 p-3">
+                            <input type="checkbox" className="rounded border-gray-300" />
+                          </th>
+                          <th className="p-3 text-left text-sm font-medium text-gray-900">Name</th>
+                          <th className="p-3 text-left text-sm font-medium text-gray-900">
+                            Context Length
+                          </th>
+                          <th className="p-3 text-left text-sm font-medium text-gray-900">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(filteredModels.length > 0 ? filteredModels : models).map((model) => (
+                          <tr key={model.id} className="border-b border-gray-200">
+                            <td className="p-3">
+                              <input type="checkbox" className="rounded border-gray-300" />
+                            </td>
+                            <td className="p-3">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {model.name}
+                                </span>
+                                <span className="text-sm text-gray-500">{model.id}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-sm text-gray-900">
+                              {model.contextLength.toLocaleString()}
+                            </td>
+                            <td className="p-3 text-sm text-gray-900">
+                              {model.pricePerMillionTokens ? (
+                                <div>
+                                  ${model.pricePerMillionTokens.prompt}/1M input tokens
+                                  <br />${model.pricePerMillionTokens.completion}/1M output tokens
+                                </div>
+                              ) : (
+                                "Free"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* No Results Message */}
+                    {filteredModels.length === 0 && debouncedSearchTerm && (
+                      <div className="p-8 text-center">
+                        <p className="text-sm text-gray-500">
+                          No models found matching "{debouncedSearchTerm}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
