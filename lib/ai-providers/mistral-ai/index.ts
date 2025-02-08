@@ -5,6 +5,7 @@ const information = {
   id: "mistral-ai",
   name: "Mistral AI",
   endpoint: "https://api.mistral.ai/v1/chat/completions",
+  icon: "https://docs.mistral.ai/img/logo.svg",
 };
 
 const getModels = async (apiKey: string): Promise<Model[]> => {
@@ -22,7 +23,6 @@ const getModels = async (apiKey: string): Promise<Model[]> => {
     contextLength: model.max_context_length,
     pricePerMillionTokens: null,
   }));
-  console.log("🚀 ~ getModels ~ result:", result);
   return result;
 };
 

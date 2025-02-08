@@ -7,7 +7,7 @@ import { modelFormSchema, type ModelFormData } from "@/schemas/model-form";
 import { Provider } from "@/types";
 import { useMutation } from "@tanstack/react-query";
 import { mistralAi } from "@/ai-providers/mistral-ai";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 
 export function ModelForm({ provider }: { provider: Provider }) {
@@ -61,7 +61,7 @@ export function ModelForm({ provider }: { provider: Provider }) {
     },
   });
 
-  const models = getModels.data ?? [];
+  const models = useMemo(() => getModels.data ?? [], [getModels.data]);
 
   // Effect to handle search
   useEffect(() => {
@@ -90,17 +90,32 @@ export function ModelForm({ provider }: { provider: Provider }) {
           {/* API Key Input */}
           <div className="space-y-2">
             <div className="flex flex-col sm:flex-row gap-3 w-full">
-              <Input
-                placeholder="Enter API Key"
-                className="flex-1"
-                type="password"
-                {...form.register("apiKey")}
-                error={form.formState.errors.apiKey?.message}
-              />
+              <div className="flex-1">
+                <Input
+                  placeholder="Enter API Key"
+                  className="w-full"
+                  type="password"
+                  {...form.register("apiKey")}
+                  error={form.formState.errors.apiKey?.message}
+                />
+                {form.formState.errors.apiKey && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {form.formState.errors.apiKey.message}
+                  </p>
+                )}
+              </div>
               <Button
                 type="button"
                 variant="primary"
-                onClick={() => getModels.mutate({ apiKey: form.getValues("apiKey") })}
+                onClick={() => {
+                  if (!form.getValues("apiKey")) {
+                    form.setError("apiKey", {
+                      message: "Please enter an API key",
+                    });
+                    return;
+                  }
+                  getModels.mutate({ apiKey: form.getValues("apiKey") });
+                }}
                 disabled={getModels.isPending}
               >
                 {getModels.isPending ? "Checking..." : "Check API Key"}
