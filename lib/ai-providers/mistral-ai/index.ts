@@ -1,6 +1,6 @@
 import { MistralModelDTO } from "@/ai-providers/mistral-ai/types";
 import { Model } from "@/types";
-
+import { v4 as uuidv4 } from "uuid";
 const information = {
   id: "mistral-ai",
   name: "Mistral AI",
@@ -18,6 +18,7 @@ const getModels = async (apiKey: string): Promise<Model[]> => {
   const data = (await response.json()) as { data: MistralModelDTO[] };
   const result = data.data.map((model) => ({
     id: model.id,
+    modelId: model.id,
     name: model.name,
     description: model.description,
     contextLength: model.max_context_length,
@@ -26,7 +27,16 @@ const getModels = async (apiKey: string): Promise<Model[]> => {
   return result;
 };
 
+const buildAuthorizationHeader = (apiKey: string) => {
+  return {
+    id: uuidv4(),
+    key: "Authorization",
+    value: `Bearer ${apiKey}`,
+  };
+};
+
 export const mistralAi = {
   information,
   getModels,
+  buildAuthorizationHeader,
 };

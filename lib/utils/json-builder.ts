@@ -22,7 +22,7 @@ interface ModelConfig {
   systemMessageSupported: boolean;
   streamOutputSupported: boolean;
   skipAPIKey: boolean;
-  pricePerMillionTokens?: PricePerMillionTokens;
+  pricePerMillionTokens?: PricePerMillionTokens | null;
 }
 
 interface JsonBuilderInput {
@@ -35,7 +35,7 @@ interface JsonBuilderInput {
     pricePerMillionTokens?: {
       prompt: number;
       completion: number;
-    };
+    } | null;
   };
   providerInfo: {
     endpoint: string;

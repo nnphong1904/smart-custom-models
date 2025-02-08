@@ -23,6 +23,23 @@ export const modelFormSchema = z.object({
       }),
     )
     .default([]),
+  models: z
+    .array(
+      z.object({
+        id: z.string(),
+        modelId: z.string(),
+        name: z.string(),
+        description: z.string().optional(),
+        contextLength: z.number(),
+        pricePerMillionTokens: z
+          .object({
+            prompt: z.number(),
+            completion: z.number(),
+          })
+          .nullable(),
+      }),
+    )
+    .default([]),
 });
 
 export type ModelFormData = z.infer<typeof modelFormSchema>;

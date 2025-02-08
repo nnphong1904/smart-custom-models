@@ -6,9 +6,10 @@ import { Toggle } from "@/components/form/toggle";
 import { modelFormSchema, type ModelFormData } from "@/schemas/model-form";
 import { Provider } from "@/types";
 import { useMutation } from "@tanstack/react-query";
-import { mistralAi } from "@/ai-providers/mistral-ai";
 import { useState, useEffect, useMemo } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { providers } from "@/ai-providers";
+import { buildModelConfigJson } from "@/utils/json-builder";
 
 export function ModelForm({ provider }: { provider: Provider }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,18 +47,53 @@ export function ModelForm({ provider }: { provider: Provider }) {
     name: "bodyParams",
   });
 
-  const onSubmit = (data: ModelFormData) => {
-    console.log(data);
-    // Handle form submission
-  };
+  const {
+    fields: modelFields,
+    append: appendModel,
+    remove: removeModel,
+  } = useFieldArray({
+    control: form.control,
+    name: "models",
+  });
 
-  const getModelsFromProvider = {
-    [mistralAi.information.id]: mistralAi.getModels,
+  const onSubmit = (data: ModelFormData) => {
+    const defaultHeaders = [providers[provider.id].buildAuthorizationHeader(data.apiKey)];
+    // Handle form submission
+    const jsons = data.models.map((model) => {
+      const json = buildModelConfigJson({
+        formData: {
+          ...data,
+          headers: [...defaultHeaders, ...data.headers],
+        },
+        modelInfo: {
+          name: model.name,
+          id: model.id,
+          contextLength: model.contextLength,
+          description: model.description,
+          pricePerMillionTokens: model.pricePerMillionTokens
+            ? {
+                prompt: model.pricePerMillionTokens.prompt,
+                completion: model.pricePerMillionTokens.completion,
+              }
+            : {
+                prompt: 0,
+                completion: 0,
+              },
+        },
+        providerInfo: {
+          endpoint: providers[provider.id].information.endpoint,
+          iconUrl: providers[provider.id].information.icon,
+          apiType: "openai",
+        },
+      });
+      return json;
+    });
+    console.log("🚀 ~ onSubmit ~ jsons:", JSON.stringify(jsons));
   };
 
   const getModels = useMutation({
     mutationFn: ({ apiKey }: { apiKey: string }) => {
-      return getModelsFromProvider[provider.id](apiKey);
+      return providers[provider.id].getModels(apiKey);
     },
   });
 
@@ -110,7 +146,7 @@ export function ModelForm({ provider }: { provider: Provider }) {
                 onClick={() => {
                   if (!form.getValues("apiKey")) {
                     form.setError("apiKey", {
-                      message: "Please enter an API key",
+                      message: "API key is required",
                     });
                     return;
                   }
@@ -169,7 +205,23 @@ export function ModelForm({ provider }: { provider: Provider }) {
                       <thead className="sticky top-0 bg-gray-50">
                         <tr className="border-b border-gray-200">
                           <th className="w-8 p-3">
-                            <input type="checkbox" className="rounded border-gray-300" />
+                            <input
+                              type="checkbox"
+                              className="rounded border-gray-300"
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                if (isChecked) {
+                                  modelFields.forEach((_, index) => {
+                                    removeModel(index);
+                                  });
+                                  filteredModels.forEach((model) => {
+                                    appendModel(model);
+                                  });
+                                } else {
+                                  form.setValue("models", []);
+                                }
+                              }}
+                            />
                           </th>
                           <th className="p-3 text-left text-sm font-medium text-gray-900">Name</th>
                           <th className="p-3 text-left text-sm font-medium text-gray-900">
@@ -182,7 +234,23 @@ export function ModelForm({ provider }: { provider: Provider }) {
                         {(filteredModels.length > 0 ? filteredModels : models).map((model) => (
                           <tr key={model.id} className="border-b border-gray-200">
                             <td className="p-3">
-                              <input type="checkbox" className="rounded border-gray-300" />
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300"
+                                checked={form.watch("models").some((m) => m.id === model.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    appendModel(model);
+                                  } else {
+                                    const index = modelFields.findIndex(
+                                      (m) => m.modelId === model.modelId,
+                                    );
+                                    if (index !== -1) {
+                                      removeModel(index);
+                                    }
+                                  }
+                                }}
+                              />
                             </td>
                             <td className="p-3">
                               <div className="flex flex-col">
