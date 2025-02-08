@@ -1,5 +1,32 @@
-import { Switch } from "@headlessui/react";
 import { cn } from "@/utils";
+import * as React from "react";
+
+import * as SwitchPrimitives from "@radix-ui/react-switch";
+import { Label } from "@/components/form/label";
+
+const Switch = React.forwardRef<
+  React.ElementRef<typeof SwitchPrimitives.Root>,
+  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
+>(({ className, ...props }, ref) => (
+  <SwitchPrimitives.Root
+    className={cn(
+      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+      "disabled:cursor-not-allowed disabled:opacity-50",
+      "data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-200",
+      className,
+    )}
+    {...props}
+    ref={ref}
+  >
+    <SwitchPrimitives.Thumb
+      className={cn(
+        "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+        "data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
+      )}
+    />
+  </SwitchPrimitives.Root>
+));
 
 interface ToggleProps {
   label: string;
@@ -16,35 +43,23 @@ export function Toggle({
   onChange,
   disabled = false,
 }: ToggleProps) {
+  const id = React.useId();
   return (
-    <Switch.Group>
-      <div className="flex items-start space-x-4">
-        <Switch
-          checked={checked}
-          onChange={onChange}
-          disabled={disabled}
-          className={cn(
-            "relative inline-flex h-6 w-11 items-center rounded-full",
-            checked ? "bg-blue-600" : "bg-gray-200",
-            "transition-colors focus:outline-none focus-visible:ring-2",
-            "focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-            disabled && "opacity-50 cursor-not-allowed",
-          )}
+    <div className="flex items-start space-x-4">
+      <Switch id={id} checked={checked} onCheckedChange={onChange} disabled={disabled} />
+      <div className="flex flex-col gap-1.5">
+        <Label
+          htmlFor={id}
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
         >
-          <span
-            className={cn(
-              "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-              checked ? "translate-x-6" : "translate-x-1",
-            )}
-          />
-        </Switch>
-        <div className="flex flex-col">
-          <Switch.Label className="text-sm font-medium">{label}</Switch.Label>
-          {description && (
-            <Switch.Description className="text-sm text-gray-500">{description}</Switch.Description>
-          )}
-        </div>
+          {label}
+        </Label>
+        {description && (
+          <Label htmlFor={id} className="text-[12px] text-gray-500">
+            {description}
+          </Label>
+        )}
       </div>
-    </Switch.Group>
+    </div>
   );
 }

@@ -1,9 +1,9 @@
-import { ModelForm } from "smart-custom-models";
+import { SmartCustomModels } from "smart-custom-models";
 
 function App() {
   return (
     <div className="w-[684px]">
-      <ModelForm />
+      <SmartCustomModels />
     </div>
   );
 }
