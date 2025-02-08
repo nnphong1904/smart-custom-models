@@ -5,6 +5,8 @@ import { Input } from "@/components/form/input";
 import { Toggle } from "@/components/form/toggle";
 import { modelFormSchema, type ModelFormData } from "@/schemas/model-form";
 import { Provider } from "@/types";
+import { useMutation } from "@tanstack/react-query";
+import { mistralAi } from "@/ai-providers/mistral-ai";
 
 export function ModelForm({ provider }: { provider: Provider }) {
   const form = useForm<ModelFormData>({
@@ -43,6 +45,18 @@ export function ModelForm({ provider }: { provider: Provider }) {
     // Handle form submission
   };
 
+  const getModelsFromProvider = {
+    [mistralAi.information.id]: mistralAi.getModels,
+  };
+
+  const getModels = useMutation({
+    mutationFn: ({ apiKey }: { apiKey: string }) => {
+      return getModelsFromProvider[provider.id](apiKey);
+    },
+  });
+
+  const models = getModels.data ?? [];
+
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="mx-auto w-full px-4">
       <div className="space-y-6">
@@ -50,17 +64,80 @@ export function ModelForm({ provider }: { provider: Provider }) {
 
         <div className="space-y-6">
           {/* API Key Input */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <Input
-              placeholder="Enter API Key"
-              className="flex-1"
-              type="password"
-              {...form.register("apiKey")}
-              error={form.formState.errors.apiKey?.message}
-            />
-            <Button type="button" variant="primary">
-              Check API Key
-            </Button>
+          <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <Input
+                placeholder="Enter API Key"
+                className="flex-1"
+                type="password"
+                {...form.register("apiKey")}
+                error={form.formState.errors.apiKey?.message}
+              />
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => getModels.mutate({ apiKey: form.getValues("apiKey") })}
+                disabled={getModels.isPending}
+              >
+                {getModels.isPending ? "Checking..." : "Check API Key"}
+              </Button>
+              {/* TODO: Add a short instructions to guide user to get the API key for each provider */}
+            </div>
+          </div>
+
+          {/* Model lists */}
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">Available Models</h2>
+            <p className="text-sm text-gray-500">
+              Enter your API key to fetch available models from {provider.name}
+            </p>
+            {models.length === 0 ? (
+              <div className="rounded-lg border-2 border-dashed border-gray-200 p-8">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <p className="mt-2 text-sm text-gray-500">No models available</p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-gray-200">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="w-8 p-3">
+                        <input type="checkbox" className="rounded border-gray-300" />
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-900">Name</th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-900">
+                        Context Length
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-900">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {models.map((model) => (
+                      <tr key={model.id} className="border-b border-gray-200">
+                        <td className="p-3">
+                          <input type="checkbox" className="rounded border-gray-300" />
+                        </td>
+                        <td className="p-3 text-sm text-gray-900">{model.name}</td>
+                        <td className="p-3 text-sm text-gray-900">
+                          {model.contextLength.toLocaleString()}
+                        </td>
+                        <td className="p-3 text-sm text-gray-900">
+                          {model.pricePerMillionTokens ? (
+                            <div>
+                              ${model.pricePerMillionTokens.prompt}/1M input tokens
+                              <br />${model.pricePerMillionTokens.completion}/1M output tokens
+                            </div>
+                          ) : (
+                            "Free"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Support Options */}
